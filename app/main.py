@@ -2,7 +2,15 @@
 Main Entry Point for AI/ML Stock Market Screening & Analysis System.
 """
 import sys
+import os
 import logging
+from pathlib import Path
+
+# Add project root directory to sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from app.ui.dashboard import LiveDashboardWindow
