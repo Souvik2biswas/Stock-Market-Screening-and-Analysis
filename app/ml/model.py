@@ -140,7 +140,20 @@ class SignalPredictor:
         X = np.array(feature_rows)
         y = np.array(labels)
 
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import accuracy_score
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y if len(set(y)) > 1 else None
+        )
         rf = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42)
+        rf.fit(X_train, y_train)
+
+        y_pred = rf.predict(X_test)
+        acc = accuracy_score(y_test, y_pred)
+        logger.info(f"Trained RandomForest Classifier on {len(X_train)} samples. Out-of-Sample Test Accuracy: {acc * 100.0:.2f}%")
+
+        # Refit on full dataset for final deployment
         rf.fit(X, y)
         return rf
 

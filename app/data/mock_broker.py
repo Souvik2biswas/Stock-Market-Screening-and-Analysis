@@ -2,12 +2,15 @@
 High-Fidelity Mock Live Market Tick and Depth Simulator.
 Simulates real-time NSE market data, order book dynamics, volume bursts, and SMMA crossovers.
 """
+import logging
 import random
 import threading
 import time
 from typing import Callable, Dict, List
 from app.config import MOCK_STOCK_UNIVERSE
 from app.data.broker_base import MarketDataAdapter, Quote, Tick
+
+logger = logging.getLogger(__name__)
 
 class MockBrokerAdapter(MarketDataAdapter):
     """
