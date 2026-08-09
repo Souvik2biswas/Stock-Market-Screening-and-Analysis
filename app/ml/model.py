@@ -8,7 +8,7 @@ import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from app.config import MODEL_FILE_PATH, ACCEPTANCE_THRESHOLD_CONFIDENCE
-from app.ml.feature_extractor import CrossoverFeatures
+from app.ml.feature_extractor import CrossoverFeatures, FeatureExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +106,8 @@ class SignalPredictor:
                     timestamp=float(t)
                 )
 
-                smma_res = smma_engine.update(tick.symbol, tick.ltp)
-                etq_res = etq_engine.update(tick)
+                smma_res = smma_engine.update_tick(tick.symbol, tick.ltp)
+                etq_res = etq_engine.update_tick(tick.symbol, tick.timestamp, tick.ltp, tick.ltq)
 
                 history_prices.append(tick.ltp)
 

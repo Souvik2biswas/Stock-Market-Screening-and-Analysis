@@ -2,6 +2,7 @@
 Genetic Algorithm (GA) Portfolio Optimizer UI Component (PyQt6).
 Displays optimal asset allocation weights, Sharpe Ratio, expected return %, and volatility.
 """
+from typing import Dict, List
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
     QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox, QSpinBox

@@ -167,6 +167,6 @@ class MockBrokerAdapter(MarketDataAdapter):
                     try:
                         self._callback(tick)
                     except Exception as e:
-                        pass
+                        logger.error(f"Error in mock broker tick callback: {e}")
 
             time.sleep(0.3)  # Tick streaming interval

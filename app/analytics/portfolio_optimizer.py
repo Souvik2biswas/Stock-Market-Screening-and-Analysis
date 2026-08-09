@@ -4,7 +4,7 @@ Optimizes asset weight allocation across screened liquid stocks to maximize Shar
 """
 from dataclasses import dataclass
 import numpy as np
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 @dataclass
 class PortfolioOptimizationResult:

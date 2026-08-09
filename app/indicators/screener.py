@@ -56,30 +56,7 @@ class StockScreener:
         )
 
     def evaluate_tick(self, tick: Tick) -> ScreeningResult:
-        passes_price = self.min_ltp <= tick.ltp <= self.max_ltp
-        passes_liquidity = (tick.bid_qty > self.min_bid_qty) and (tick.ask_qty > self.min_ask_qty)
-        is_screened_in = passes_price and passes_liquidity
-
-        reasons = []
-        if not passes_price:
-            reasons.append(f"LTP ₹{tick.ltp} out of range [₹{self.min_ltp}-₹{self.max_ltp}]")
-        if tick.bid_qty <= self.min_bid_qty:
-            reasons.append(f"Bid Qty {tick.bid_qty:,} ≤ 10,00,000")
-        if tick.ask_qty <= self.min_ask_qty:
-            reasons.append(f"Ask Qty {tick.ask_qty:,} ≤ 10,00,000")
-
-        reason_str = "PASSED: All filters met" if is_screened_in else "FAILED: " + ", ".join(reasons)
-
-        return ScreeningResult(
-            symbol=tick.symbol,
-            ltp=tick.ltp,
-            bid_qty=tick.bid_qty,
-            ask_qty=tick.ask_qty,
-            passes_price=passes_price,
-            passes_liquidity=passes_liquidity,
-            is_screened_in=is_screened_in,
-            reason=reason_str
-        )
+        return self.evaluate_quote(tick)
 
     def screen_universe(self, quotes: Dict[str, Quote]) -> Tuple[List[str], List[ScreeningResult]]:
         shortlist = []
