@@ -27,6 +27,8 @@ from app.ui.components.metric_cards import MetricCardsBar
 from app.ui.components.stock_table import StockTableView
 from app.ui.components.ai_drawer import AIDrawerPanel
 from app.ui.components.chart_widget import SMMAChartWidget
+from app.ui.components.ga_portfolio_tab import GAPortfolioTabWidget
+from app.ui.components.analytics_tax_tab import AnalyticsTaxTabWidget
 from app.ui.settings_dialog import SettingsDialog
 
 logger = logging.getLogger(__name__)
@@ -119,6 +121,12 @@ class LiveDashboardWindow(QMainWindow):
 
         self.chart_widget = SMMAChartWidget()
         right_tab_widget.addTab(self.chart_widget, "📈 Live SMMA Chart")
+
+        self.ga_portfolio_tab = GAPortfolioTabWidget()
+        right_tab_widget.addTab(self.ga_portfolio_tab, "🧬 GA Portfolio Optimizer")
+
+        self.analytics_tax_tab = AnalyticsTaxTabWidget()
+        right_tab_widget.addTab(self.analytics_tax_tab, "📊 NL-SQL Analytics & Tax")
 
         splitter.addWidget(right_tab_widget)
         splitter.setSizes([850, 590])  # Initial column width ratio
@@ -296,6 +304,17 @@ class LiveDashboardWindow(QMainWindow):
 
         for sym, d in self.stock_data.items():
             self.table_view.update_stock_row(d)
+
+        # Update GA Portfolio Optimizer & Natural Language SQL / Tax Analytics
+        screened_symbols = [sym for sym, d in self.stock_data.items() if d["is_screened_in"]]
+        screened_prices = {sym: d["ltp"] for sym, d in self.stock_data.items() if d["is_screened_in"]}
+        self.ga_portfolio_tab.update_stock_data(screened_symbols, screened_prices)
+
+        closed_trades_list = []
+        for hist in self.trades_history.values():
+            closed_trades_list.extend([t for t in hist if t.get("status") == "CLOSED"])
+
+        self.analytics_tax_tab.update_market_database(self.stock_data, closed_trades_list)
 
     def _on_stock_selected(self, symbol: str):
         self.selected_symbol = symbol
