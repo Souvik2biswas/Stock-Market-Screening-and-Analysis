@@ -27,7 +27,6 @@ class StockScreener:
         self.min_ltp = min_ltp
         self.max_ltp = max_ltp
         self.min_bid_qty = min_bid_qty
-        self.max_bid_qty = min_ask_qty
         self.min_ask_qty = min_ask_qty
 
     def evaluate_quote(self, quote: Quote) -> ScreeningResult:

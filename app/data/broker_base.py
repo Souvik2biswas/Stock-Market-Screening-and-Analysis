@@ -2,7 +2,7 @@
 Abstract Broker API Interface and Unified Data Models.
 """
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 import time
 
@@ -22,7 +22,7 @@ class Quote:
     ask_price: float
     ask_qty: int
     volume: int
-    timestamp: float = time.time()
+    timestamp: float = field(default_factory=time.time)
 
 @dataclass
 class Tick:
@@ -34,7 +34,7 @@ class Tick:
     bid_qty: int
     ask_price: float
     ask_qty: int
-    timestamp: float = time.time()
+    timestamp: float = field(default_factory=time.time)
 
 class MarketDataAdapter(ABC):
     """

@@ -68,9 +68,9 @@ class FyersAdapter(MarketDataAdapter):
                         symbol=sym,
                         ltp=float(v.get("lp", 0.0)),
                         bid_price=float(v.get("bid", 0.0)),
-                        bid_qty=int(v.get("ask", 0)),
+                        bid_qty=int(v.get("bqty", v.get("bid_qty", 0))),
                         ask_price=float(v.get("ask", 0.0)),
-                        ask_qty=int(v.get("bid", 0)),
+                        ask_qty=int(v.get("aqty", v.get("ask_qty", 0))),
                         volume=int(v.get("volume", 0))
                     )
         except Exception as e:

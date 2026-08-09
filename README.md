@@ -3,7 +3,7 @@
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 [![UI Framework](https://img.shields.io/badge/UI-PyQt6-green.svg)](https://www.qt.io/)
 [![Machine Learning](https://img.shields.io/badge/ML-Scikit--Learn-orange.svg)](https://scikit-learn.org/)
-[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 A real-time Python desktop application for screening NSE-listed stocks, computing technical indicators (SMMA 20/120), tracking Exchange Traded Quantity (ETQ) & rolling average prices, evaluating crossover signals via a Quantitative ML Classifier, optimizing asset allocations with a Genetic Algorithm, and providing Indian Capital Gains Tax advisory.
 
