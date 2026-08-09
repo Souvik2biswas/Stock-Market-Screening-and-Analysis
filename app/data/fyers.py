@@ -80,6 +80,63 @@ class FyersAdapter(MarketDataAdapter):
 
     def subscribe_ticks(self, symbols: List[str], callback: Callable[[Tick], None]) -> None:
         logger.info(f"Subscribed {len(symbols)} symbols on Fyers WebSocket feed.")
+        if not self._connected or not self.access_token:
+            return
+
+        try:
+            from fyers_apiv3.fyersModel import FyersDataSocket
+
+            formatted_symbols = [s if s.startswith("NSE:") else f"NSE:{s}-EQ" for s in symbols]
+
+            def on_message(message):
+                if isinstance(message, dict):
+                    sym = message.get("symbol", "").replace("NSE:", "").replace("-EQ", "")
+                    tick = Tick(
+                        symbol=sym,
+                        ltp=float(message.get("ltp", 0.0)),
+                        ltq=int(message.get("ltq", 0)),
+                        volume=int(message.get("vol_traded_today", message.get("volume", 0))),
+                        bid_price=float(message.get("bid", 0.0)),
+                        bid_qty=int(message.get("bqty", message.get("bid_qty", 0))),
+                        ask_price=float(message.get("ask", 0.0)),
+                        ask_qty=int(message.get("aqty", message.get("ask_qty", 0)))
+                    )
+                    callback(tick)
+
+            def on_error(message):
+                logger.error(f"Fyers WebSocket Error: {message}")
+
+            def on_close(message):
+                logger.info(f"Fyers WebSocket Closed: {message}")
+
+            def on_open():
+                data_type = "SymbolUpdate"
+                fyers_socket.subscribe(symbols=formatted_symbols, data_type=data_type)
+                fyers_socket.keep_running()
+
+            fyers_socket = FyersDataSocket(
+                access_token=f"{self.client_id}:{self.access_token}",
+                log_path="",
+                l2_data=False,
+                write_to_file=False,
+                on_connect=on_open,
+                on_close=on_close,
+                on_error=on_error,
+                on_message=on_message
+            )
+
+            import threading
+            ws_thread = threading.Thread(target=fyers_socket.connect, daemon=True)
+            ws_thread.start()
+            self._fyers_socket = fyers_socket
+
+        except Exception as e:
+            logger.error(f"Could not initialize FyersDataSocket: {e}")
 
     def unsubscribe_ticks(self, symbols: List[str]) -> None:
-        pass
+        if hasattr(self, "_fyers_socket") and self._fyers_socket:
+            try:
+                formatted_symbols = [s if s.startswith("NSE:") else f"NSE:{s}-EQ" for s in symbols]
+                self._fyers_socket.unsubscribe(symbols=formatted_symbols, data_type="SymbolUpdate")
+            except Exception as e:
+                logger.error(f"Error unsubscribing Fyers ticks: {e}")

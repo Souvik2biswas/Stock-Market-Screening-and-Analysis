@@ -18,6 +18,20 @@ def test_ga_portfolio_optimizer():
     assert res.expected_return_pct > 0
     assert abs(sum(res.weights.values()) - 1.0) < 0.01
 
+def test_ga_portfolio_optimizer_with_price_series():
+    optimizer = GAPortfolioOptimizer()
+    symbols = ["TATAMOTORS", "SBIN", "YESBANK"]
+    price_series = {
+        "TATAMOTORS": [400.0, 405.0, 410.0, 415.0, 420.0, 430.0, 445.0],
+        "SBIN": [450.0, 455.0, 460.0, 465.0, 470.0, 475.0, 485.0],
+        "YESBANK": [30.0, 32.0, 31.0, 33.0, 35.0, 36.0, 38.0]
+    }
+
+    res = optimizer.optimize_portfolio(symbols, price_series, max_assets=2, generations=20)
+    assert len(res.selected_symbols) <= 2
+    assert abs(sum(res.weights.values()) - 1.0) < 0.01
+    assert "Generational GA Optimizer" in res.summary_text
+
 def test_indian_tax_advisor():
     trades = [
         {"pnl": 15000.0, "entry_ltp": 400.0, "exit_ltp": 430.0, "holding_days": 30},

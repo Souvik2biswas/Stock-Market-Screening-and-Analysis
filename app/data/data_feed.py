@@ -21,6 +21,7 @@ class DataFeedManager:
         self.credentials = credentials or {}
         self.adapter: MarketDataAdapter = self._create_adapter(mode, self.credentials)
         self._tick_listeners: List[Callable[[Tick], None]] = []
+        self._price_histories: Dict[str, List[float]] = {}
 
     def _create_adapter(self, mode: str, creds: dict) -> MarketDataAdapter:
         if mode == "ANGEL_ONE":
@@ -45,6 +46,7 @@ class DataFeedManager:
         self.mode = mode
         self.credentials = credentials or {}
         self.adapter = self._create_adapter(mode, self.credentials)
+        self._price_histories.clear()
         connected = self.adapter.connect()
         logger.info(f"Switched data feed mode to {mode}. Connection status: {connected}")
         return connected
@@ -65,6 +67,12 @@ class DataFeedManager:
             self._tick_listeners.remove(callback)
 
     def _on_tick(self, tick: Tick) -> None:
+        if tick.symbol not in self._price_histories:
+            self._price_histories[tick.symbol] = []
+        self._price_histories[tick.symbol].append(tick.ltp)
+        if len(self._price_histories[tick.symbol]) > 500:
+            self._price_histories[tick.symbol].pop(0)
+
         for listener in self._tick_listeners:
             try:
                 listener(tick)
@@ -75,7 +83,16 @@ class DataFeedManager:
         return self.adapter.get_symbol_universe()
 
     def get_bulk_quotes(self, symbols: List[str]) -> Dict[str, Quote]:
-        return self.adapter.get_bulk_quotes(symbols)
+        quotes = self.adapter.get_bulk_quotes(symbols)
+        for sym, q in quotes.items():
+            if sym not in self._price_histories:
+                self._price_histories[sym] = [q.ltp]
+        return quotes
+
+    def get_price_histories(self, symbols: Optional[List[str]] = None) -> Dict[str, List[float]]:
+        if symbols:
+            return {s: self._price_histories.get(s, []) for s in symbols}
+        return self._price_histories.copy()
 
     def subscribe_shortlist(self, symbols: List[str]) -> None:
         self.adapter.subscribe_ticks(symbols, self._on_tick)

@@ -43,3 +43,20 @@ def test_mock_broker_tick_streaming():
 
     assert len(ticks_received) > 0, "Ticks should be streamed from Mock Broker"
     assert ticks_received[0].symbol in ["TATAMOTORS", "SBIN"]
+
+def test_angel_one_universe_fallback():
+    from app.data.angel_one import AngelOneAdapter
+    adapter = AngelOneAdapter()
+    universe = adapter.get_symbol_universe()
+    assert len(universe) >= 8
+    assert "SBIN" in universe or "TATASTEEL" in universe
+
+def test_data_feed_manager_history():
+    from app.data.data_feed import DataFeedManager
+    dfm = DataFeedManager(mode="MOCK")
+    dfm.start()
+    quotes = dfm.get_bulk_quotes(["TATAMOTORS", "SBIN"])
+    histories = dfm.get_price_histories(["TATAMOTORS"])
+    assert "TATAMOTORS" in histories
+    assert len(histories["TATAMOTORS"]) >= 1
+    dfm.stop()

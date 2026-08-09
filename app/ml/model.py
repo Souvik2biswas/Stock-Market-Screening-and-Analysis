@@ -54,49 +54,103 @@ class SignalPredictor:
     @staticmethod
     def _train_bootstrap_model() -> RandomForestClassifier:
         """
-        Generates realistic synthetic dataset of SMMA crossover features and outcomes,
-        training a robust Random Forest Classifier.
+        Generates dataset by running simulated historical price bar trajectories through
+        SMMAEngine and ETQEngine, labeling crossover events based on forward N-bar price returns.
         """
-        np.random.seed(42)
-        n_samples = 1500
+        from app.indicators.smma import SMMAEngine
+        from app.indicators.etq_engine import ETQEngine
+        from app.data.broker_base import Tick
 
-        # Feature generation:
-        # ltq_surge_ratio: 0.5 to 3.5
-        ltq_surge = np.random.uniform(0.5, 3.5, n_samples)
-        # bid_ask_qty_ratio: 0.3 to 3.0
-        bid_ask_ratio = np.random.uniform(0.3, 3.0, n_samples)
-        # etq_acceleration: 0.4 to 2.5
-        etq_acc = np.random.uniform(0.4, 2.5, n_samples)
-        # smma_spread_pct: 0.01 to 1.5%
-        smma_spread = np.random.uniform(0.01, 1.5, n_samples)
-        # price_vs_avg20_pct: -2.0 to +2.0%
-        price_vs_avg = np.random.uniform(-2.0, 2.0, n_samples)
-        # spread_pct: 0.01 to 0.5%
-        spread_pct = np.random.uniform(0.01, 0.5, n_samples)
-        # signal_type_num: 0 (SELL) or 1 (BUY)
-        sig_type = np.random.choice([0, 1], size=n_samples)
+        rng = np.random.default_rng(42)
+        feature_rows = []
+        labels = []
 
-        # Ground Truth Logic: Profitable trade if high LTQ surge + favorable Bid/Ask depth support
-        # For BUY: high LTQ surge + high bid_ask_ratio (strong buyers) -> Profitable
-        # For SELL: high LTQ surge + low bid_ask_ratio (strong sellers) -> Profitable
-        depth_impact = np.where(sig_type == 1, bid_ask_ratio - 1.0, 1.0 - bid_ask_ratio)
-        score = (
-            0.35 * (ltq_surge - 1.0) +
-            0.30 * depth_impact +
-            0.20 * (etq_acc - 1.0) +
-            0.15 * (smma_spread - 0.2) -
-            0.10 * (spread_pct * 10)
-        )
-        
-        prob = 1.0 / (1.0 + np.exp(-score))
-        labels = (prob > 0.50).astype(int)
+        symbols = [f"SIM_STOCK_{i}" for i in range(15)]
+        num_bars = 250
+        forward_window = 15
 
-        X = np.column_stack([
-            ltq_surge, bid_ask_ratio, etq_acc, smma_spread, price_vs_avg, spread_pct, sig_type
-        ])
+        for sym in symbols:
+            # Simulate Geometric Brownian Motion price trajectory
+            base_price = rng.uniform(50.0, 450.0)
+            drift = rng.uniform(-0.0002, 0.0004)
+            volatility = rng.uniform(0.008, 0.02)
+            returns = rng.normal(loc=drift, scale=volatility, size=num_bars)
+            prices = [base_price]
+            for r in returns:
+                prices.append(max(5.0, prices[-1] * (1.0 + r)))
+
+            smma_engine = SMMAEngine(fast_period=20, slow_period=120)
+            etq_engine = ETQEngine()
+
+            history_features = []
+            history_prices = []
+
+            for t, p in enumerate(prices):
+                # Simulate realistic bid/ask depth and volume surge
+                spread = p * rng.uniform(0.0005, 0.003)
+                bid_price = round(p - spread / 2.0, 2)
+                ask_price = round(p + spread / 2.0, 2)
+                volume_tick = int(rng.exponential(scale=5000))
+                bid_qty = int(rng.uniform(50000, 1500000))
+                ask_qty = int(rng.uniform(50000, 1500000))
+
+                tick = Tick(
+                    symbol=sym,
+                    ltp=round(p, 2),
+                    ltq=int(rng.uniform(10, 500)),
+                    volume=volume_tick,
+                    bid_price=bid_price,
+                    bid_qty=bid_qty,
+                    ask_price=ask_price,
+                    ask_qty=ask_qty,
+                    timestamp=float(t)
+                )
+
+                smma_res = smma_engine.update(tick.symbol, tick.ltp)
+                etq_res = etq_engine.update(tick)
+
+                history_prices.append(tick.ltp)
+
+                # Check if an SMMA crossover occurred at this tick
+                if smma_res.is_crossover:
+                    feats = FeatureExtractor.extract(tick, smma_res, etq_res)
+                    history_features.append((t, feats))
+
+            # Forward-return labeling: evaluate price trajectory after crossover
+            for t_idx, feats in history_features:
+                if t_idx + forward_window < len(history_prices):
+                    future_prices = history_prices[t_idx + 1 : t_idx + 1 + forward_window]
+                    entry_p = feats.ltp
+                    if feats.signal == "BUY":
+                        max_p = max(future_prices)
+                        # Profitable if price moves up >= +0.5%
+                        label = 1 if (max_p - entry_p) / entry_p >= 0.005 else 0
+                    else:
+                        min_p = min(future_prices)
+                        # Profitable if price drops >= 0.5%
+                        label = 1 if (entry_p - min_p) / entry_p >= 0.005 else 0
+
+                    feature_rows.append(feats.to_feature_vector())
+                    labels.append(label)
+
+        # Fallback if insufficient crossovers generated
+        if len(feature_rows) < 50:
+            return SignalPredictor._train_fallback_model()
+
+        X = np.array(feature_rows)
+        y = np.array(labels)
 
         rf = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=42)
-        rf.fit(X, labels)
+        rf.fit(X, y)
+        return rf
+
+    @staticmethod
+    def _train_fallback_model() -> RandomForestClassifier:
+        np.random.seed(42)
+        X = np.random.uniform(0.1, 2.0, (200, 7))
+        y = np.random.choice([0, 1], size=200)
+        rf = RandomForestClassifier(n_estimators=50, max_depth=4, random_state=42)
+        rf.fit(X, y)
         return rf
 
     def predict(self, features: CrossoverFeatures) -> PredictionResult:
