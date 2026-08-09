@@ -1,0 +1,27 @@
+# Python
+.venv/
+venv/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build & Dist
+build/
+dist/
+*.egg-info/
+
+# Testing & Logs
+.pytest_cache/
+*.log
+
+# Environment & Credentials
+.env
+.env.*
+config.ini
+
+# OS & Submodules
+Finance agent/
+.DS_Store
+Thumbs.db
